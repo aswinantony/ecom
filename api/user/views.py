@@ -2,7 +2,7 @@ from rest_framework import viewsets
 from rest_framework.permission import AllowAny
 from .serializers import UserSerializer
 from .models import CustomUser
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.contrib.auth import get_user_model
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import login, logout
@@ -26,7 +26,7 @@ def signin(request):
 
     # Validation part
 
-    if not re.match("\b[\w\.-]+@[\w\.-]+\.\w{2,4}\b", username)
+    if not re.match("^[\w\.\+\-]+\@[\w]+\.[a-z]{2,3}$", username):
         return JsonResponse({'error': 'Enter a valid email'})
 
     if len(password) < 3:
@@ -41,19 +41,19 @@ def signin(request):
             usr_dict = UserModel.objects.filter(email=username).values().first()
             user_dict.pop('password')
 
-        if user.session_token != "0":
-            user.session_token = "0"
+            if user.session_token != "0":
+                user.session_token = "0"
+                user.save()
+                return JsonResponse({'error': 'Previous Session Exists'})
+
+            token = generate_session_token()
+            user.session_token = token
             user.save()
-            return JsonResponse({'error': 'Previous Session Exists'})
+            login(request, user)
+            return JsonResponse({'token': token, 'user': usr_dict})
 
-        token = generate_session_token()
-        user.session_token = token
-        user.save()
-        login(request, user)
-        return JsonResponse({'token': token, 'user': usr_dict})
-
-    else:
-        return JsonResponse({'error': 'Invalid Password'})
+        else:
+            return JsonResponse({'error': 'Invalid Password'})
 
     except UserModel.DoesNotExist:
         return JsonResponse({'error': 'Invalid Email'})
