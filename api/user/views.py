@@ -38,7 +38,7 @@ def signin(request):
         user = UserModel.objects.get(email=username)
 
         if user.check_password(password):
-            usr_dict = UserModel.objects.filter(email=username).values().first()
+            user_dict = UserModel.objects.filter(email=username).values().first()
             user_dict.pop('password')
 
             if user.session_token != "0":
@@ -50,7 +50,7 @@ def signin(request):
             user.session_token = token
             user.save()
             login(request, user)
-            return JsonResponse({'token': token, 'user': usr_dict})
+            return JsonResponse({'token': token, 'user': user_dict})
 
         else:
             return JsonResponse({'error': 'Invalid Password'})
@@ -67,6 +67,7 @@ def signout(request, id):
         user = UserModel.objects.get(pk=id)
         user.session_token = '0'
         user.save()
+
     except UserModel.DoesNotExist:
         return JsonResponse({'error': 'Invalid User ID'})
 
@@ -76,10 +77,11 @@ class UserViewSet(viewsets.ModelViewSet):
     permission_classes_by_action = {'create': [AllowAny]}
 
     queryset = CustomUser.objects.all().order_by('id')
-    seralizer_class = UserSerializer
+    serializer_class = UserSerializer
 
     def get_permissions(self):
         try:
             return [permission() for permission in self.permission_classes_by_action[self.action]]
+        
         except KeyError:
             return [permission() for permission in self.permission_classes]
